@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import * as path from "path";
 import * as fs from "fs";
 import { createRequire } from "module";
@@ -56,11 +58,11 @@ const minimalDatabaseAdapter: IDatabaseAdapter = {
 
   getRoom: async () =>
     stringToUuid(
-      "mock-room-id",
+      "mock-room-id"
     ) as `${string}-${string}-${string}-${string}-${string}`,
   createRoom: async () =>
     stringToUuid(
-      "mock-room-id",
+      "mock-room-id"
     ) as `${string}-${string}-${string}-${string}-${string}`,
   removeRoom: async () => {},
   getRoomsForParticipant: async () => [],
@@ -125,7 +127,7 @@ async function loadLocalPlugins(): Promise<Plugin[]> {
             console.log(`DEBUG: Loaded plugin file: ${indexFilePath}`); // Fallback log
           } else {
             elizaLogger.warn(
-              `No index file found in plugin directory: ${pluginPath}`,
+              `No index file found in plugin directory: ${pluginPath}`
             );
             console.log(`DEBUG: Missing index file in ${pluginPath}`); // Fallback log
             continue;
@@ -162,10 +164,10 @@ async function loadLocalPlugins(): Promise<Plugin[]> {
   }
 
   elizaLogger.info(
-    `Finished plugin loading process. Loaded plugins: ${plugins.length}`,
+    `Finished plugin loading process. Loaded plugins: ${plugins.length}`
   );
   console.log(
-    `DEBUG: Final loaded plugins: ${plugins.map((p) => p.name).join(", ")}`,
+    `DEBUG: Final loaded plugins: ${plugins.map((p) => p.name).join(", ")}`
   ); // Fallback log
 
   return plugins;
@@ -177,14 +179,14 @@ async function resolvePlugins(pluginNames: string[]): Promise<Plugin[]> {
   const localPlugins = await loadLocalPlugins();
 
   elizaLogger.info(
-    `Local plugins available: ${localPlugins.map((p) => p.name).join(", ")}`,
+    `Local plugins available: ${localPlugins.map((p) => p.name).join(", ")}`
   );
 
   return Promise.all(
     pluginNames.map(async (pluginName) => {
       // Check if the plugin is local
       const localPlugin = localPlugins.find(
-        (plugin) => plugin.name === pluginName,
+        (plugin) => plugin.name === pluginName
       );
 
       if (localPlugin) {
@@ -198,7 +200,7 @@ async function resolvePlugins(pluginNames: string[]): Promise<Plugin[]> {
           pluginName,
           {
             paths: [process.cwd()],
-          },
+          }
         );
         elizaLogger.info(`Resolved node_modules plugin: ${pluginName}`);
         const importedPlugin = await import(resolvedPath);
@@ -207,7 +209,7 @@ async function resolvePlugins(pluginNames: string[]): Promise<Plugin[]> {
         elizaLogger.error(`Failed to resolve plugin: ${pluginName}`, error);
         throw error;
       }
-    }),
+    })
   );
 }
 
@@ -222,7 +224,7 @@ async function main() {
   const characters: Character[] = await loadCharacters("characters.json");
   const localPlugins = await loadLocalPlugins();
   console.log(
-    `DEBUG: Local plugins loaded: ${localPlugins.map((p) => p.name).join(", ")}`,
+    `DEBUG: Local plugins loaded: ${localPlugins.map((p) => p.name).join(", ")}`
   );
 
   for (const character of characters) {
@@ -234,16 +236,16 @@ async function main() {
 
     elizaLogger.info(
       `Character "${character.name}" loaded with plugins: ${combinedPlugins.map(
-        (p) => p.name,
-      )}`,
+        (p) => p.name
+      )}`
     );
 
     const runtime = new AgentRuntime({
       character,
       plugins: combinedPlugins,
-      token: "dummy-token",
+      token: process.env.OPENAI_API_KEY || "dummy-token",
       agentId: stringToUuid(
-        character.name,
+        character.name
       ) as `${string}-${string}-${string}-${string}-${string}`,
       modelProvider: character.modelProvider,
       databaseAdapter: minimalDatabaseAdapter,

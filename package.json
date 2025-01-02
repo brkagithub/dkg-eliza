@@ -27,6 +27,7 @@
     "@ai16z/client-direct": "0.1.6-alpha.4",
     "@ai16z/eliza": "0.1.6-alpha.4",
     "@ai16z/plugin-0g": "0.1.6-alpha.4",
+    "dkg.js": "^8.0.4",
     "dotenv": "^16.4.7"
   },
   "devDependencies": {
