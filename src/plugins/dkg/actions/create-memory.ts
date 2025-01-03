@@ -8,8 +8,7 @@ import {
   elizaLogger,
   generateText,
 } from "@ai16z/eliza";
-import { SearchResult } from "../../../common/types.ts";
-import { handleApiError, formatSearchResults } from "../../../common/utils.ts";
+import { handleApiError } from "../../../common/utils.ts";
 // @ts-ignore
 import DKG from "dkg.js";
 import { DKG_EXPLORER_LINKS, dkgMemoryTemplate } from "../constants.ts";
@@ -100,7 +99,7 @@ export default {
       },
     ],
   ],
-  similes: ["dkg", "origintrail", "knowledge graph"],
+  similes: [],
   validate: async (runtime: IAgentRuntime, message: Memory, state?: State) => {
     // no need to validate
     return true;
@@ -146,7 +145,6 @@ export default {
       const UAL = createOperationResult.UAL;
       elizaLogger.info(`Created Knowledge Asset with the UAL ${UAL}`);
 
-      // TODO: make dkg explorer link constant
       // TODO: make this link be a part of the message or a reply to the previous message. idk how to do this w twitter client
       const ENVIRONMENT = (process.env.ENVIRONMENT ??
         "testnet") as keyof typeof DKG_EXPLORER_LINKS;
