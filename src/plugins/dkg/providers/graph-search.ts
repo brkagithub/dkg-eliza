@@ -6,8 +6,14 @@ import {
   Provider,
   State,
   elizaLogger,
+  generateText,
+  ModelClass,
 } from "@ai16z/eliza";
-
+import {
+  dkgMemoryTemplate,
+  generalSparqlQuery,
+  sparqlExamples,
+} from "../constants.ts";
 // @ts-ignore
 import DKG from "dkg.js";
 
@@ -42,6 +48,45 @@ interface DKGClientConfig {
   frequency?: number;
   contentType?: string;
   nodeApiVersion?: string;
+}
+
+async function constructSparqlQuery(
+  runtime: IAgentRuntime,
+  userQuery: string
+): Promise<string> {
+  const context = `
+    You are tasked with generating a SPARQL query to retrieve information from a Decentralized Knowledge Graph (DKG). 
+    The query should align with the JSON-LD memory template provided below:
+    
+    ${JSON.stringify(dkgMemoryTemplate)}
+
+    ** Examples **
+    Use the following SPARQL queries as examples to understand the format:
+    ${sparqlExamples.join("\n\n")}
+
+    ** Instructions **
+    1. Analyze the user query and identify the key fields and concepts it refers to.
+    2. Use these fields and concepts to construct a SPARQL query.
+    3. Ensure the SPARQL query follows standard syntax and can be executed against the DKG.
+    4. Use 'OR' logic when constructing the query to ensure broader matching results. For example, if multiple keywords or concepts are provided, the query should match any of them, not all.
+    5. Replace the examples with actual terms from the user's query.
+    6. Always select distinct results by adding the DISTINCT keyword.
+    7. Always select name, description and content text. Do not select other fields.
+
+    ** User Query **
+    ${userQuery}
+
+    ** Output **
+    Provide only the SPARQL query, wrapped in a sparql code block for clarity.
+  `;
+
+  const sparqlQuery = await generateText({
+    runtime,
+    context,
+    modelClass: ModelClass.LARGE,
+  });
+
+  return sparqlQuery.replace(/```sparql|```/g, "").trim();
 }
 
 export class DKGProvider {
@@ -87,28 +132,27 @@ export class DKGProvider {
 
     elizaLogger.info(`Got user query ${JSON.stringify(userQuery)}`);
 
-    // TODO: instead of hardcoding query use some predefined ontology + fewshot examples + LLM to construct query
-    // TODO: ontology can probably be defined in json of the character via examples, this would be ideal
-    // TODO: for the beggining agent should probably create only one 'type' of KA (then improve it and make it a whole ontology)
-    const query = `
-    SELECT ?p ?o
-    WHERE {
-    <uuid:belgrade> ?p ?o
-    }
-    `;
+    const query = await constructSparqlQuery(runtime, userQuery);
+    elizaLogger.info(`Generated SPARQL query: ${query}`);
 
-    elizaLogger.info(`Formed SPARQL query ${query}`);
+    let queryOperationResult = await this.client.graph.query(query, "SELECT");
 
-    const queryOperationResult = await this.client.graph.query(query, "SELECT");
+    if (!queryOperationResult || !queryOperationResult.data?.length) {
+      elizaLogger.info(
+        `LLM-generated SPARQL query failed, defaulting to basic query.`
+      );
 
-    if (!queryOperationResult || !queryOperationResult.data) {
-      throw new Error("DKG response did not contain expected data.");
+      queryOperationResult = await this.client.graph.query(
+        generalSparqlQuery,
+        "SELECT"
+      );
     }
 
     elizaLogger.info(
       `Got ${queryOperationResult.data.length} results from the DKG`
     );
 
+    // TODO: take 5 results instead of all based on similarity probably
     // TODO: idk dont love this format, maybe change it
     const result = queryOperationResult.data.map((entry: any) => {
       const formattedParts = Object.keys(entry).map(
